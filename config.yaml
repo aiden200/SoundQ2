@@ -1,17 +1,24 @@
 
 gd_sam2:
   MODEL_ID: IDEA-Research/grounding-dino-tiny
-  WORKING_VIDEO_PATH: working_dir/tracking
   PROMPT_TYPE_FOR_VIDEO: box # choose from ["point", "box", "mask"]
   sam2_checkpoint: Grounded-SAM-2/checkpoints/sam2.1_hiera_large.pt
   model_cfg: Grounded-SAM-2/configs/sam2.1/sam2.1_hiera_l.yaml
+  gd_sam2_generate_results: results/gd_sam2_generate_results.csv
 
 paths:
-  data_dir: /path/to/data
+  # data_dir: /path/to/data
   working_dir: working_dir
+  working_dir_gd_sam: working_dir/tracking
   results_path: results
+  segmented_class_results: results/segmented_classes
 
+dataset_paths:
+  video_dir: /path/to/dir
+  class_dir: synth_data_gen/STARSS23_CLASSES.txt
 
-features:
-  enable_feature_x: true
-  max_items: 100
+# result_files:
+
+# features:
+#   enable_feature_x: true
+#   max_items: 100

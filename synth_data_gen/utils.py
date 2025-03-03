@@ -1,4 +1,4 @@
-import math
+import math, os
 
 # Reference METU outter trayectory:  bottom outter trayectory
 REF_OUT_TRAJ = ["034", "024", "014", "004", "104", "204",
@@ -53,3 +53,20 @@ def az_ele_from_source(ref_point, src_point):
 	elevation = math.degrees(math.asin(dz / distance))
 
 	return azimuth, elevation, distance
+
+
+def get_classes(config) -> dict:
+	classes_file = config["dataset_paths"]["class_dir"]
+	classes = {}
+	with open(classes_file, 'r') as f:
+		for line in f:
+			number, class_name = line.strip().split('.')
+			classes[number] = class_name
+	
+	return classes
+
+
+def generate_paths(config) -> None:
+	for path in config["paths"]:
+		if not os.path.exists(path):
+			os.mkdir(path)
