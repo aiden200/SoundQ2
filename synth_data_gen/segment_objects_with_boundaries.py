@@ -76,8 +76,8 @@ class SegmentObjectsWithBoundaries:
         # categories = "smoke. train. railroad. car. building. fire. boxes."
 
         # Draw bounding boxes over detected objects
-        # inputs = self.processor(images=frame, text=categories, return_tensors="pt").to(self.device)
-        inputs = self.processor(images=frame, text=categories, return_tensors="pt").to(self.grounding_device)
+        inputs = self.processor(images=frame, text=categories, return_tensors="pt").to(self.device)
+        # inputs = self.processor(images=frame, text=categories, return_tensors="pt").to(self.grounding_device)
         with torch.no_grad():
             outputs = self.grounding_model(**inputs)
 
@@ -93,6 +93,7 @@ class SegmentObjectsWithBoundaries:
         input_boxes = results[0]["boxes"].cpu().numpy()
         confidences = results[0]["scores"].cpu().numpy().tolist()
         class_names = results[0]["labels"]
+
 
         self.image_predictor.set_image(np.array(frame.convert("RGB")))
 
