@@ -6,6 +6,7 @@ gd_sam2:
   model_cfg: configs/sam2.1/sam2.1_hiera_l.yaml
   gd_sam2_generate_results: results/gd_sam2_generate_results.csv
 
+
 paths:
   # data_dir: /path/to/data
   working_dir: working_dir
@@ -13,11 +14,14 @@ paths:
   working_dir_gd_sam_img: working_dir/img
   working_dir_gd_sam_masks_only: working_dir/masks_only
   results_path: results
+  video_results_path: results/videos
   segmented_class_results: results/segmented_classes
 
 dataset_paths:
   video_dir: /path/to/dir
   class_dir: synth_data_gen/STARSS23_CLASSES.txt
+
+max_vid_seg: 15
 
 # result_files:
 

@@ -83,6 +83,7 @@ def generate_paths(config) -> None:
 			os.mkdir(config["paths"][path])
 
 
+
 class CommonUtils:
     @staticmethod
     def creat_dirs(path):
@@ -99,6 +100,44 @@ class CommonUtils:
                 print(f"Path '{path}' already exists.")
         except Exception as e:
             print(f"An error occurred while creating the path: {e}")
+    
+
+    @staticmethod
+    def draw_masks_only(raw_image_path, mask_path, json_path, output_path):
+        CommonUtils.creat_dirs(output_path)
+        raw_image_name_list = sorted(os.listdir(raw_image_path))
+        
+        for raw_image_name in raw_image_name_list:
+            image_path = os.path.join(raw_image_path, raw_image_name)
+            image = cv2.imread(image_path)
+            if image is None:
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+
+            # Load mask
+            mask_npy_path = os.path.join(mask_path, "mask_" + raw_image_name.split(".")[0] + ".npy")
+            mask = np.load(mask_npy_path)
+
+            # Create a blank black image
+            black_background = np.zeros_like(image)
+
+            # Get unique mask IDs (skip background)
+            unique_ids = np.unique(mask)
+
+            # Apply masks to extract objects and place them on a black background
+            for uid in unique_ids:
+                if uid == 0:
+                    continue  # Skip background
+
+                object_mask = (mask == uid)
+                
+                # Use the mask to extract object pixels from the original image
+                black_background[object_mask] = image[object_mask]
+
+            # Save the result
+            output_image_path = os.path.join(output_path, raw_image_name)
+            cv2.imwrite(output_image_path, black_background)
+            
+
 
     @staticmethod
     def draw_masks_and_box_with_supervision(raw_image_path, mask_path, json_path, output_path):
