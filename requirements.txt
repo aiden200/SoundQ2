@@ -1,3 +1,5 @@
 opencv-python
 supervision
 transformers
+yt-dlp
+pandas

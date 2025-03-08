@@ -13,13 +13,18 @@ paths:
   working_dir_gd_sam: working_dir/tracking
   working_dir_gd_sam_img: working_dir/img
   working_dir_gd_sam_masks_only: working_dir/masks_only
+  
   results_path: results
   video_results_path: results/videos
   segmented_class_results: results/segmented_classes
 
 dataset_paths:
-  video_dir: /path/to/dir
   class_dir: synth_data_gen/STARSS23_CLASSES.txt
+
+filepaths:
+  audio_csv_file: data/dataset.csv
+  audio_updated_csv_file: data/updated_dataset.csv
+  cookie_filepath: data/cookies.txt
 
 max_vid_seg: 15
 

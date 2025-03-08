@@ -4,8 +4,10 @@ import os
 import json
 import cv2
 import numpy as np
+import yt_dlp
 import supervision as sv
 import random
+import pandas as pd
 
 
 # Reference METU outter trayectory:  bottom outter trayectory
@@ -70,11 +72,78 @@ def get_classes(config) -> Tuple[dict, str]:
 	with open(classes_file, 'r') as f:
 		for line in f:
 			number, class_name = line.strip().split('.')
-			classes[number] = class_name
+			classes[number] = class_name.replace(" ", "_")
 			formatted_classes = formatted_classes + class_name + ". "
 	
 	
 	return classes, formatted_classes
+
+def dwl_vid(video_url, save_path, filename, cookie_filepath) -> None:
+    
+    if os.path.exists(f"{save_path}/{filename}.mp4"):
+        print("Skipping, video exists")
+        return
+    
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',  # Combine the best video and audio streams
+        'outtmpl': f'{save_path}/{filename}.%(ext)s',       # Custom filename template
+        'cookiefile': cookie_filepath, # "data/yt_cookies.txt",
+        "cachedir": False,
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',    # Convert video format
+            'preferedformat': 'mp4',          # Convert to MP4
+        }],
+        'quiet': True,             # Suppresses all output messages
+        'no_warnings': True,  
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([video_url])
+
+
+def download_vids(save_dir, dataset_path, cookie_filepath):
+    df = pd.read_csv(dataset_path)
+    success_vids = 0
+    error_vids = 0
+    
+    for index, row in df.iterrows():
+        # Access data in each row using the column names
+        video_id = row['video_id']
+        start_time = row['start']
+        end_time = row['end']
+        video_class = row['class']
+
+
+        if "/shorts/" in video_id:
+             video_name = video_id.split("/shorts/")[1]
+        else:
+            if ["?si="] in video_id:
+                video_name = video_id.split("?si=")[1]
+            elif ["?v="] in video_id:
+                video_name = video_id.split("?v=")[1]
+            elif ["?v="] in video_id:
+                video_name = video_id.split("?v=")[1]
+
+            video_name = video_name.split("&")[0]
+        
+        # print(f"Video ID: {video_id}, Start: {start_time}, End: {end_time}, Class: {video_class}")
+
+        # You can perform additional processing here
+        # For example, convert start and end times to seconds
+        def time_to_seconds(time_str):
+            minutes, seconds = map(int, time_str.split(':'))
+            return minutes * 60 + seconds
+
+        start_seconds = time_to_seconds(start_time)
+        end_seconds = time_to_seconds(end_time)
+        try:
+            dwl_vid(video_id, save_dir, video_name, cookie_filepath)
+            success_vids += 1
+        except Exception as e:
+             print(e)
+             error_vids += 1
+    
+    print(f"Success vids: {success_vids}, error vids: {error_vids}")
+
 
 
 def generate_paths(config) -> None:
@@ -100,6 +169,8 @@ class CommonUtils:
                 print(f"Path '{path}' already exists.")
         except Exception as e:
             print(f"An error occurred while creating the path: {e}")
+    
+
     
 
     @staticmethod

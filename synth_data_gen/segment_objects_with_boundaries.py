@@ -117,13 +117,13 @@ class SegmentObjectsWithBoundaries:
         self.process_video_with_scene_boundaries(video_path, video_name)
     
 
-    def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, scene_boundaries):
+    def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, class_name, scene_boundaries):
 
         category = self.classes[class_num]
         # For DINO prompting purpose
-        category_formatted = category + "."
+        category_formatted = category.replace("_", " ") + "."
     
-        class_dir = os.path.join(self.segmented_class_result_path, class_num)
+        class_dir = os.path.join(self.segmented_class_result_path, f"{class_num}_{class_name}")
         class_video_dir = os.path.join(class_dir, video_name)
         output_video = os.path.join(class_dir, f"{video_name}.mp4")
         if not os.path.exists(class_dir):
@@ -336,14 +336,82 @@ class SegmentObjectsWithBoundaries:
                         
             
             for class_num in self.classes:
-                if (video_name, class_num) in done:
+                if (video_name, self.classes[class_num]) in done:
                     continue
                 else:
-                    done.append((video_name, class_num))
+                    done.append((video_name, self.classes[class_num]))
                 
                 
                 
-                self.run_sam_dino_on_video(video_path, video_name, output_path, class_num, scene_boundaries)
+                self.run_sam_dino_on_video(video_path, video_name, output_path, class_num, self.classes[class_num], scene_boundaries)
+                
+                with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
+                    writer = csv.writer(file)
+                    for row in done:
+                        writer.writerow(row)
+    
+
+
+    def process_annotated_videos(self, csv_path, video_path, video_name, scene_boundaries=False):
+        """
+        Process the video using scene boundaries. For each scene segment,
+        generate annotated frames and, for each detected class (object), create a
+        masked video that only shows that object. Also, generate an overall annotated video.
+        """
+
+        
+        
+        segment_paths = [(video_path, video_name)]
+
+        video_info = sv.VideoInfo.from_video_path(video_path)
+        video_duration = video_info.total_frames / video_info.fps
+
+        # Check if video duration is greater than 15 seconds
+        if video_duration > self.max_vid_seg:
+            # Calculate the number of segments
+            num_segments = int(video_duration // self.max_vid_seg)
+            segment_paths = []
+
+            # Split the video into self.max_vid_seg-second segments
+            for i in range(num_segments + 1):
+                start_time = i * self.max_vid_seg
+                end_time = min((i + 1) * self.max_vid_seg, video_duration)
+                segment_name = f"{video_name}_segment_{i}"
+                segment_dir = os.path.join(self.video_results_path, segment_name)
+                if not os.path.exists(segment_dir):
+                    os.mkdir(segment_dir)
+                segment_output_path = os.path.join(segment_dir, f"{video_name}_segment_{i}.mp4")
+                
+                if not os.path.exists(segment_output_path):
+                    # Use ffmpeg or similar tool to split the video
+                    os.system(f'ffmpeg -i "{video_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
+                if self.verbose:
+                    print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
+                segment_paths.append((segment_output_path, segment_name))
+
+        for video_path, video_name in segment_paths:
+            output_path = os.path.join(self.video_results_path, video_name)
+            
+            done = []
+            
+            if os.path.exists(self.result_file):
+                with open(self.result_file, mode='r', encoding='utf-8') as file:
+                    reader = csv.reader(file)
+                    for row in reader:
+                        # video, number, status
+                        v, n = row
+                        done.append((v, n))
+                        
+            
+            for class_num in self.classes:
+                if (video_name, self.classes[class_num]) in done:
+                    continue
+                else:
+                    done.append((video_name, self.classes[class_num]))
+                
+                
+                
+                self.run_sam_dino_on_video(video_path, video_name, output_path, class_num, self.classes[class_num], scene_boundaries)
                 
                 with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
                     writer = csv.writer(file)
