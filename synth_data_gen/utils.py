@@ -100,6 +100,22 @@ def dwl_vid(video_url, save_path, filename, cookie_filepath) -> None:
         ydl.download([video_url])
 
 
+def generate_name_from_yt_vids(yt_link:str) -> str:
+    if "/shorts/" in yt_link:
+        video_name = yt_link.split("/shorts/")[1]
+    else:
+        if "?si=" in yt_link:
+            video_name = yt_link.split("?si=")[1]
+        elif "?v=" in yt_link:
+            video_name = yt_link.split("?v=")[1]
+        elif "?v=" in yt_link:
+            video_name = yt_link.split("?v=")[1]
+
+        video_name = video_name.split("&")[0]
+    
+    return video_name
+
+
 def download_vids(save_dir, dataset_path, cookie_filepath):
     df = pd.read_csv(dataset_path)
     success_vids = 0
@@ -107,23 +123,13 @@ def download_vids(save_dir, dataset_path, cookie_filepath):
     
     for index, row in df.iterrows():
         # Access data in each row using the column names
-        video_id = row['video_id']
+        video_id = row['link']
         start_time = row['start']
         end_time = row['end']
         video_class = row['class']
 
 
-        if "/shorts/" in video_id:
-             video_name = video_id.split("/shorts/")[1]
-        else:
-            if ["?si="] in video_id:
-                video_name = video_id.split("?si=")[1]
-            elif ["?v="] in video_id:
-                video_name = video_id.split("?v=")[1]
-            elif ["?v="] in video_id:
-                video_name = video_id.split("?v=")[1]
-
-            video_name = video_name.split("&")[0]
+        video_name = generate_name_from_yt_vids(video_id)
         
         # print(f"Video ID: {video_id}, Start: {start_time}, End: {end_time}, Class: {video_class}")
 

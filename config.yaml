@@ -13,7 +13,7 @@ paths:
   working_dir_gd_sam: working_dir/tracking
   working_dir_gd_sam_img: working_dir/img
   working_dir_gd_sam_masks_only: working_dir/masks_only
-  
+  fragment_yt_path: data/fragment_yt_videos
   results_path: results
   video_results_path: results/videos
   segmented_class_results: results/segmented_classes
