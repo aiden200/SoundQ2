@@ -19,7 +19,7 @@ paths:
   segmented_class_results: results/segmented_classes
 
 dataset_paths:
-  class_dir: synth_data_gen/STARSS23_CLASSES.txt
+  class_dir: data/STARSS23_CLASSES.txt
 
 filepaths:
   audio_csv_file: data/dataset.csv

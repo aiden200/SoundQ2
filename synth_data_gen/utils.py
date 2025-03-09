@@ -104,14 +104,14 @@ def generate_name_from_yt_vids(yt_link:str) -> str:
     if "/shorts/" in yt_link:
         video_name = yt_link.split("/shorts/")[1]
     else:
-        if "?si=" in yt_link:
-            video_name = yt_link.split("?si=")[1]
-        elif "?v=" in yt_link:
-            video_name = yt_link.split("?v=")[1]
-        elif "?v=" in yt_link:
-            video_name = yt_link.split("?v=")[1]
+        if "si=" in yt_link:
+            video_name = yt_link.split("si=")[1]
+        elif "v=" in yt_link:
+            video_name = yt_link.split("v=")[1]
+        else:
+             print(yt_link)
 
-        video_name = video_name.split("&")[0]
+    video_name = video_name.split("&")[0]
     
     return video_name
 

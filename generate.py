@@ -49,6 +49,6 @@ def test():
     vid = "/home/aiden/Documents/cs/SoundQ2/test/videoplayback (1).mp4"
 
     # sg.test_video(vid)
-    sg.process_annotated_videos(download=True)
+    sg.process_annotated_videos(download=False)
 
 test()

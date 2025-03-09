@@ -1,0 +1,13 @@
+0.Female speech, woman speaking
+1.Male speech, man speaking
+2.Clapping
+3.Telephone
+4.Laughter
+5.Domestic sounds
+6.Walk, footsteps
+7.Door, open or close
+8.Music
+9.Musical instrument
+10.Water tap, faucet
+11.Bell
+12.Knock

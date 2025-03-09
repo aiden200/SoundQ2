@@ -8,6 +8,8 @@ import shutil
 import csv
 import copy
 import pandas as pd
+import subprocess
+
 
 from pathlib import Path
 from tqdm import tqdm
@@ -121,11 +123,11 @@ class SegmentObjectsWithBoundaries:
 
     def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, class_name, scene_boundaries):
 
-        category = self.classes[class_num]
+        category = self.classes[str(class_num)]
         # For DINO prompting purpose
         category_formatted = category.replace("_", " ") + "."
     
-        class_dir = os.path.join(self.segmented_class_result_path, f"{class_num}_{class_name}")
+        class_dir = os.path.join(self.segmented_class_result_path, f"{str(class_num)}_{class_name}")
         class_video_dir = os.path.join(class_dir, video_name)
         output_video = os.path.join(class_dir, f"{video_name}.mp4")
         if not os.path.exists(class_dir):
@@ -377,7 +379,7 @@ class SegmentObjectsWithBoundaries:
             video_link = row['link']
             start_time = row['start']
             end_time = row['end']
-            video_class = int(row['class'])
+            video_class = row['class']
 
             video_name = generate_name_from_yt_vids(video_link)
             
@@ -388,12 +390,16 @@ class SegmentObjectsWithBoundaries:
             start_seconds = time_to_seconds(start_time)
             end_seconds = time_to_seconds(end_time)
             video_location = os.path.join(fragment_yt_dir, f"{video_name}.mp4")
-            fragments.append((video_location, start_seconds, end_seconds, video_class))
+            fragments.append((video_location, start_seconds, end_seconds, video_class, video_name))
 
         
-        for v_path, s, e, v_class in fragments:
+        for v_path, s, e, v_class, v_name in fragments:
+            if not os.path.exists(v_path):
+                continue
 
-            segment_paths = [(v_path, s, e, v_class)]
+            segment_paths = [(v_path, s, e, v_class, v_name)]
+            
+            
 
             video_info = sv.VideoInfo.from_video_path(v_path)
             
@@ -409,22 +415,26 @@ class SegmentObjectsWithBoundaries:
                 start_time = s
                 for i in range(num_segments + 1):
                     start_time = s + i * self.max_vid_seg
-                    end_time = min((i + 1) * self.max_vid_seg, video_duration)
-                    segment_name = f"{video_name}_segment_{i}"
+                    end_time = min(s + (i + 1) * self.max_vid_seg, video_duration)
+                    segment_name = f"{v_name}_segment_{i}"
                     segment_dir = os.path.join(self.video_results_path, segment_name)
                     if not os.path.exists(segment_dir):
                         os.mkdir(segment_dir)
-                    segment_output_path = os.path.join(segment_dir, f"{video_name}_segment_{i}.mp4")
+                    segment_output_path = os.path.join(segment_dir, f"{v_name}_segment_{i}.mp4")
                     
                     if not os.path.exists(segment_output_path):
                         # Use ffmpeg or similar tool to split the video
-                        os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
+                        # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
+                        subprocess.run(
+                            ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
+                            check=True
+                        )
                     if self.verbose:
                         print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
-                    segment_paths.append((segment_output_path, start_time, end_time, video_class))
-                    
-
-            for video_location, start_seconds, end_seconds, video_class in segment_paths:
+                    segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
+            
+            
+            for video_location, start_seconds, end_seconds, video_class, video_name in segment_paths:
                 output_path = os.path.join(self.video_results_path, video_name)
                 
                 done = []
@@ -436,16 +446,16 @@ class SegmentObjectsWithBoundaries:
                             # video, number, status
                             v, n = row
                             done.append((v, n))
-                            
                 
-                if (video_name, self.classes[video_class]) in done:
+                            
+                if (video_name, self.classes[str(video_class)]) in done:
                     continue
                 else:
-                    done.append((video_name, self.classes[video_class]))
+                    done.append((video_name, self.classes[str(video_class)]))
                 
                 
                 
-                self.run_sam_dino_on_video(video_location, video_name, output_path, video_class, self.classes[video_class], scene_boundaries)
+                self.run_sam_dino_on_video(video_location, video_name, output_path, video_class, self.classes[str(video_class)], scene_boundaries)
                 
                 with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
                     writer = csv.writer(file)
