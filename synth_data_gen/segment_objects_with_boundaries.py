@@ -45,6 +45,7 @@ class SegmentObjectsWithBoundaries:
         self.model_cfg=config["gd_sam2"]["model_cfg"]
         self.result_file=config["gd_sam2"]["gd_sam2_generate_results"]
         self.scene_transition_detector=SceneTransitionDetector(histogram_diff_threshold=histogram_threshold)
+        self.log = log
         self.verbose=verbose
         self.device=device
 
@@ -122,6 +123,7 @@ class SegmentObjectsWithBoundaries:
     
 
     def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, class_name, scene_boundaries):
+
 
         category = self.classes[str(class_num)]
         # For DINO prompting purpose
@@ -405,6 +407,7 @@ class SegmentObjectsWithBoundaries:
             
             video_duration = e - s
 
+
             # Check if video duration is greater than 15 seconds
             if video_duration > self.max_vid_seg:
                 # Calculate the number of segments
@@ -422,16 +425,39 @@ class SegmentObjectsWithBoundaries:
                         os.mkdir(segment_dir)
                     segment_output_path = os.path.join(segment_dir, f"{v_name}_segment_{i}.mp4")
                     
-                    if not os.path.exists(segment_output_path):
-                        # Use ffmpeg or similar tool to split the video
-                        # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
-                        subprocess.run(
-                            ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
-                            check=True
-                        )
-                    if self.verbose:
-                        print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
-                    segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
+                    try:
+                        if not os.path.exists(segment_output_path):
+                            # Use ffmpeg or similar tool to split the video
+                            # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
+                            subprocess.run(
+                                ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
+                                check=True
+                            )
+                        if self.verbose:
+                            print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
+                        segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
+                    except Exception as e:
+                        if self.log:
+                            self.log.warning(f"Failed to generate video: {segment_output_path} with error {e}")
+            else:
+                segment_paths = []
+                start_time = s
+                end_time = e
+                segment_name = f"{v_name}_segment_0"
+                segment_dir = os.path.join(self.video_results_path, segment_name)
+                if not os.path.exists(segment_dir):
+                    os.mkdir(segment_dir)
+                segment_output_path = os.path.join(segment_dir, f"{v_name}_segment_0.mp4")
+                if not os.path.exists(segment_output_path):
+                    # Use ffmpeg or similar tool to split the video
+                    # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
+                    subprocess.run(
+                        ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
+                        check=True
+                    )
+                if self.verbose:
+                    print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
+                segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
             
             
             for video_location, start_seconds, end_seconds, video_class, video_name in segment_paths:
@@ -454,13 +480,15 @@ class SegmentObjectsWithBoundaries:
                     done.append((video_name, self.classes[str(video_class)]))
                 
                 
-                
-                self.run_sam_dino_on_video(video_location, video_name, output_path, video_class, self.classes[str(video_class)], scene_boundaries)
-                
-                with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
-                    writer = csv.writer(file)
-                    for row in done:
-                        writer.writerow(row)
+                try:
+                    self.run_sam_dino_on_video(video_location, video_name, output_path, video_class, self.classes[str(video_class)], scene_boundaries)
+                    with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
+                        writer = csv.writer(file)
+                        for row in done:
+                            writer.writerow(row)
+                except Exception as e:
+                    if self.log:
+                        self.log.warning(f"Failed to run sam and dino for video {video_location} with exception {e}")
 
 
 
