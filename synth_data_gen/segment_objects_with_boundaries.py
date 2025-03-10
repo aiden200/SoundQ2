@@ -122,21 +122,24 @@ class SegmentObjectsWithBoundaries:
         self.process_video_with_scene_boundaries(video_path, video_name)
     
 
-    def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, class_name, scene_boundaries):
-
+    def run_sam_dino_on_video(self, video_path, video_name, output_path, class_num, class_name, scene_boundaries, keep_fps=False, force_frame=30, class_events_raw=False):
 
         category = self.classes[str(class_num)]
         # For DINO prompting purpose
         category_formatted = category.replace("_", " ") + "."
-    
-        class_dir = os.path.join(self.segmented_class_result_path, f"{str(class_num)}_{class_name}")
-        class_video_dir = os.path.join(class_dir, video_name)
-        output_video = os.path.join(class_dir, f"{video_name}.mp4")
-        if not os.path.exists(class_dir):
-            os.mkdir(class_dir)
-        if not os.path.exists(class_video_dir):
-            os.mkdir(class_video_dir)
-    
+        if class_events_raw:
+            class_video_dir = output_path
+            output_video = os.path.join(class_video_dir, f"{video_name}.mp4")
+        else:
+            class_dir = os.path.join(self.segmented_class_result_path, f"{str(class_num)}_{class_name}")
+            class_video_dir = os.path.join(class_dir, video_name)
+
+            output_video = os.path.join(class_dir, f"{video_name}.mp4")
+            if not os.path.exists(class_dir):
+                os.mkdir(class_dir)
+            if not os.path.exists(class_video_dir):
+                os.mkdir(class_video_dir)
+        
     
         for d in [self.working_dir_gd_sam, self.working_dir_gd_sam_img, self.working_dir_gd_sam_masks_only]:
             if os.path.exists(d):
@@ -278,13 +281,22 @@ class SegmentObjectsWithBoundaries:
 
             
             CommonUtils.draw_masks_only(self.working_dir_gd_sam_img, mask_data_dir, json_data_dir, self.working_dir_gd_sam)
+        
+        if keep_fps:
+            video_fps = get_fps(video_path)
+        else:
+            if force_frame:
+                video_fps = force_frame
+            else:
+                video_fps = 25
+
 
         if not os.listdir(self.working_dir_gd_sam):
             #no detection
             shutil.rmtree(mask_data_dir)
             shutil.rmtree(json_data_dir)
         else:
-            create_video_from_images(self.working_dir_gd_sam, output_video)
+            create_video_from_images(self.working_dir_gd_sam, output_video, frame_rate=video_fps)
             
         
            
@@ -358,137 +370,6 @@ class SegmentObjectsWithBoundaries:
     
 
 
-    def process_annotated_videos(self, download=False, scene_boundaries=False):
-        """
-        Process the video using scene boundaries. For each scene segment,
-        generate annotated frames and, for each detected class (object), create a
-        masked video that only shows that object. Also, generate an overall annotated video.
-        """
-
-        fragment_yt_dir = self.config["paths"]["fragment_yt_path"]
-        yt_csv_vid = self.config["filepaths"]["audio_updated_csv_file"]
-        if download:
-            # Download the respective videos
-            cookie_path = self.config["filepaths"]["cookie_filepath"]
-
-            download_vids(fragment_yt_dir, yt_csv_vid, cookie_path)
-        
-        df = pd.read_csv(yt_csv_vid)
-
-        fragments = []
-        for index, row in df.iterrows():
-            # Access data in each row using the column names
-            video_link = row['link']
-            start_time = row['start']
-            end_time = row['end']
-            video_class = row['class']
-
-            video_name = generate_name_from_yt_vids(video_link)
-            
-            def time_to_seconds(time_str):
-                minutes, seconds = map(int, time_str.split(':'))
-                return minutes * 60 + seconds
-
-            start_seconds = time_to_seconds(start_time)
-            end_seconds = time_to_seconds(end_time)
-            video_location = os.path.join(fragment_yt_dir, f"{video_name}.mp4")
-            fragments.append((video_location, start_seconds, end_seconds, video_class, video_name))
-
-        
-        for v_path, s, e, v_class, v_name in fragments:
-            if not os.path.exists(v_path):
-                continue
-
-            segment_paths = [(v_path, s, e, v_class, v_name)]
-            
-            
-
-            video_info = sv.VideoInfo.from_video_path(v_path)
-            
-            video_duration = e - s
-
-
-            # Check if video duration is greater than 15 seconds
-            if video_duration > self.max_vid_seg:
-                # Calculate the number of segments
-                num_segments = int(video_duration // self.max_vid_seg)
-                segment_paths = []
-
-                # Split the video into self.max_vid_seg-second segments
-                start_time = s
-                for i in range(num_segments + 1):
-                    start_time = s + i * self.max_vid_seg
-                    end_time = min(s + (i + 1) * self.max_vid_seg, video_duration)
-                    segment_name = f"{v_name}_segment_{i}"
-                    segment_dir = os.path.join(self.video_results_path, segment_name)
-                    if not os.path.exists(segment_dir):
-                        os.mkdir(segment_dir)
-                    segment_output_path = os.path.join(segment_dir, f"{v_name}_segment_{i}.mp4")
-                    
-                    try:
-                        if not os.path.exists(segment_output_path):
-                            # Use ffmpeg or similar tool to split the video
-                            # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
-                            subprocess.run(
-                                ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
-                                check=True
-                            )
-                        if self.verbose:
-                            print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
-                        segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
-                    except Exception as e:
-                        if self.log:
-                            self.log.warning(f"Failed to generate video: {segment_output_path} with error {e}")
-            else:
-                segment_paths = []
-                start_time = s
-                end_time = e
-                segment_name = f"{v_name}_segment_0"
-                segment_dir = os.path.join(self.video_results_path, segment_name)
-                if not os.path.exists(segment_dir):
-                    os.mkdir(segment_dir)
-                segment_output_path = os.path.join(segment_dir, f"{v_name}_segment_0.mp4")
-                if not os.path.exists(segment_output_path):
-                    # Use ffmpeg or similar tool to split the video
-                    # os.system(f'ffmpeg -i "{v_path}" -ss {start_time} -to {end_time} -c copy "{segment_output_path}"')
-                    subprocess.run(
-                        ['ffmpeg', '-i', v_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_output_path],
-                        check=True
-                    )
-                if self.verbose:
-                    print(f"creating new segment video: {segment_name} from {start_time}:{end_time}")
-                segment_paths.append((segment_output_path, start_time, end_time, v_class, segment_name))
-            
-            
-            for video_location, start_seconds, end_seconds, video_class, video_name in segment_paths:
-                output_path = os.path.join(self.video_results_path, video_name)
-                
-                done = []
-                
-                if os.path.exists(self.result_file):
-                    with open(self.result_file, mode='r', encoding='utf-8') as file:
-                        reader = csv.reader(file)
-                        for row in reader:
-                            # video, number, status
-                            v, n = row
-                            done.append((v, n))
-                
-                            
-                if (video_name, self.classes[str(video_class)]) in done:
-                    continue
-                else:
-                    done.append((video_name, self.classes[str(video_class)]))
-                
-                
-                try:
-                    self.run_sam_dino_on_video(video_location, video_name, output_path, video_class, self.classes[str(video_class)], scene_boundaries)
-                    with open(self.result_file, mode='w', encoding='utf-8', newline='') as file:
-                        writer = csv.writer(file)
-                        for row in done:
-                            writer.writerow(row)
-                except Exception as e:
-                    if self.log:
-                        self.log.warning(f"Failed to run sam and dino for video {video_location} with exception {e}")
 
 
 

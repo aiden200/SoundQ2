@@ -42,6 +42,12 @@ def az_ele_from_source_radians(ref_point, src_point):
 	elevation = math.asin(dz/distance)
 	return azimuth, elevation, distance
 
+def get_fps(video_path):
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    return fps
+
 
 def az_ele_from_source(ref_point, src_point):
 	"""

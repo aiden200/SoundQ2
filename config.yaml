@@ -14,8 +14,11 @@ paths:
   working_dir_gd_sam_img: working_dir/img
   working_dir_gd_sam_masks_only: working_dir/masks_only
   fragment_yt_path: data/fragment_yt_videos
+  class_events_raw_path: data/class_events_raw
+  class_events_raw_result_path: results/class_events_raw
   results_path: results
   video_results_path: results/videos
+  class_events_videos_path: results/class_events_raw/videos
   segmented_class_results: results/segmented_classes
 
 dataset_paths:

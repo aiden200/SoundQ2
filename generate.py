@@ -3,6 +3,7 @@ import yaml
 import torch
 
 from synth_data_gen.segment_objects_with_boundaries import SegmentObjectsWithBoundaries
+from synth_data_gen.process_datasets import DataSetProcessor
 
 
 log = logging.getLogger('my_logger')
@@ -45,10 +46,12 @@ def test():
     with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
 
-    sg = SegmentObjectsWithBoundaries(config, device, log=log, verbose=True, parallel=True)
-    vid = "/home/aiden/Documents/cs/SoundQ2/test/videoplayback (1).mp4"
+    dp = DataSetProcessor(config, device, log)
+    dp.process_class_events_raw()
+    # sg = SegmentObjectsWithBoundaries(config, device, log=log, verbose=True, parallel=True)
+    # vid = "/home/aiden/Documents/cs/SoundQ2/test/videoplayback (1).mp4"
 
     # sg.test_video(vid)
-    sg.process_annotated_videos(download=False)
+    # sg.process_annotated_videos(download=False)
 
 test()
