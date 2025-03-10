@@ -58,7 +58,8 @@ class AudioVisualSynthesizer:
 	def generate_audiovisual_event(self, mix_name):
 		self.generate_track_metadata(os.path.join("output/metadata/", mix_name))
 		self.generate_video_mix_360(os.path.join("output/video/", mix_name))
-		self.generate_audio_mix_spatialized(os.path.join("output/audio/", mix_name))
+        # Commenting this for now since we don't have the audio for the segmented videos
+		# self.generate_audio_mix_spatialized(os.path.join("output/audio/", mix_name))
 
 	def generate_video_mix_360(self, mix_name):
 		# Create VideoWriter for the output video
@@ -205,11 +206,12 @@ input_360_videos = [os.path.join(input_360_video_path, f) for f in os.listdir(in
 
 # A directory containing all video assets by event class (shared a sample in drive, see readme)
 rirs, source_coords = get_audio_spatial_data(aud_fmt="em32", room="METU")
-video_assets_dir =  "/scratch/ssd1/audiovisual_datasets/class_events"
+video_assets_dir =  "/scratch/ssd1/audiovisual_datasets/segmented_classes"
 overlay_video_paths = []
 for root, dirs, files in os.walk(video_assets_dir):
     for file in files:
-        overlay_video_paths.append(os.path.join(root, file))
+        if file.endswith(".mp4"): # TODO: (Aiden), maybe we place the masks into a separate directory? so here we only deal with .mp4
+            overlay_video_paths.append(os.path.join(root, file))
 
 # Initialize directoies:
 
@@ -220,9 +222,9 @@ os.makedirs("./output/metadata", exist_ok=True)
 
 min_duration = 2  # Minimum duration for overlay videos (in seconds)
 max_duration = 4  # Maximum duration for overlay videos (in seconds)
-total_duration = 30
+total_duration = 15
 
-for i in range(98, 120):
+for i in range(0, 2): # generate 2 videos
 	overlay_video_paths = [item for item in overlay_video_paths if ".DS_Store" not in item]
 	random.shuffle(overlay_video_paths)
 	track_name = f'fold6_roomMETU_mix{i:03d}'.format(i)  # File to save overlay info
