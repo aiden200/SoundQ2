@@ -1,7 +1,7 @@
 # SoundQ2 — Enhanced sound event localization and detection in real 360-degree audio-visual soundscapes.
 
 <div align="center">
-    <img src="assets/cover.jpg">
+    <img src="assets/cover.jpg", height=500>
     <p></p>
 </div>
 
